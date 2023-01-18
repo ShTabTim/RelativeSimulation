@@ -5,3 +5,11 @@ project(sh_relative)
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 
 add_executable(${PROJECT_NAME} "main.cpp")
+
+add_subdirectory(libs/sh_graphics/libs/sh_graphics)
+include_directories(libs/sh_graphics/libs/sh_graphics)
+
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        sh_libs::sh_graphics_lib
+    )
