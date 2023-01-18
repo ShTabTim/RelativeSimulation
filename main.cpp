@@ -1,5 +1,5 @@
 #include <Windows.h>
-#include <ctime>
+#include <chrono>
 #include <vector>
 #include <cmath>
 #include <iostream>
@@ -15,13 +15,16 @@
 handle hd;
 shwin wnd;
 
-unsigned long comp_mspf() {
-	static unsigned long old_time = clock()-15, new_time = clock(), dt = 15;
-	new_time = clock();
-	dt += new_time - old_time;
-	dt >>= 1;
-	old_time = new_time;
-	return dt;
+float comp_mspf() {
+    static std::chrono::system_clock::time_point new_time = std::chrono::system_clock::now();
+    static std::chrono::system_clock::time_point old_time = new_time;
+    old_time = new_time;
+    new_time = std::chrono::system_clock::now();
+    std::chrono::duration<float> dTime = new_time - old_time;
+    static float dt = 0.01f;
+    dt += dTime.count();
+    dt *= 0.5f;
+	return dt*0.5f;
 }
 
 typedef struct imm {
@@ -71,7 +74,7 @@ uint32_t start_index = 0;
 float V[WW][HH];
 imm position = imm(256, 256 - 150);
 imm velosity = imm(VP, 0);
-float dt = 0;
+float dt = 0.001f;
 
 void rend(shwin* wnd) {
 	hd.clear(0xFF00000F);
@@ -101,7 +104,7 @@ void rend(shwin* wnd) {
 
     hd.ring(position.x, position.y, 5, 0xFFFF0010);
     hd.ring(hd.width>>1, hd.height>>1, 10, 0xFFFFFF00);
-	for (uint32_t u(start_index+1); u < start_index + ll; u++) {
+	for (uint32_t u(start_index+1); u  < start_index + ll; u++) {
         hd.line2p(track[u%ll].x, track[u%ll].y, track[(u+1)%ll].x, track[(u+1)%ll].y, 0xFF0000FF);
 
 		//hd.circ(rand() % hd.width, rand() % hd.height, 64 + rand() % 64, 0xFF000000 + 0x00FFFF00 & (rand()));
@@ -114,7 +117,7 @@ void rend(shwin* wnd) {
 	}
 	StretchDIBits(wnd->hdc, 0, 0, wnd->width, wnd->height, 0, 0, hd.width, hd.height, hd.handle, &wnd->buf_info, DIB_RGB_COLORS, SRCCOPY);
 
-	dt = ((float)(comp_mspf())) / 1000.0f;
+	dt = (float)(comp_mspf());
 	std::wstring s = L" s to frame: " + std::to_wstring(dt) + L" spf, speed: " + std::to_wstring(1.0f/dt) + L" fps ";
 	TextOutW(wnd->hdc, 0, 0, s.c_str(), s.length());
 }
@@ -134,6 +137,8 @@ int WinMain(HINSTANCE hinst, HINSTANCE prev_hinst, LPSTR cmd_line, int show_cmd)
              + (PAR / (imm(x + 0.5f - (WW>>1), y + 0.5f - (HH>>1)).length2())) * (
                 0.5f - GSM / ((imm(x + 0.5f - (WW>>1), y + 0.5f - (HH>>1)).length())*C)));
         }
+	for (uint32_t u(ll); u--;)
+        track[u%ll] = position;
 
 	hd.init(WW, HH);
 	wnd.init(hinst, L"Graphics test\0", rend, WW, HH);
